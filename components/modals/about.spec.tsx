@@ -1,0 +1,38 @@
+import { screen } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+
+import { AboutModal } from './about.tsx';
+import { renderWithContext } from '../../../test/render-with-context.tsx';
+import * as contextHooks from '../../hooks/context.tsx';
+
+describe('<AboutModal>', () => {
+  it('renders with release version if present', () => {
+    vi.stubEnv('VITE_GBA_RELEASE_VERSION', '0.0.0');
+
+    renderWithContext(<AboutModal />);
+
+    expect(screen.getByText('Version 0.0.0')).toBeVisible();
+  });
+
+  it('closes modal using the close button', async () => {
+    const setIsModalOpenSpy = vi.fn();
+    const { useModalContext: original } = await vi.importActual<
+      typeof contextHooks
+    >('../../hooks/context.tsx');
+
+    vi.spyOn(contextHooks, 'useModalContext').mockImplementation(() => ({
+      ...original(),
+      setIsModalOpen: setIsModalOpenSpy
+    }));
+
+    renderWithContext(<AboutModal />);
+
+    // click the close button
+    const closeButton = screen.getByText('Close', { selector: 'button' });
+    expect(closeButton).toBeInTheDocument();
+    await userEvent.click(closeButton);
+
+    expect(setIsModalOpenSpy).toHaveBeenCalledWith(false);
+  });
+});
