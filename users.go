@@ -15,7 +15,7 @@ func GetUsersTable(ctx *context.Context) table.Table {
 	users := table.NewDefaultTable(ctx, table.DefaultConfigWithDriverAndConnection("postgresql", "gbajs3"))
 
 	info := users.GetInfo()
-
+ 
 	info.AddField("ID", "id", db.Serial)
 	info.AddField("Username", "username", db.Text).
 		FieldFilterable().

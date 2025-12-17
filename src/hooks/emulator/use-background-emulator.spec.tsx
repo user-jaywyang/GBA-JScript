@@ -13,7 +13,7 @@ vi.mock('@uidotdev/usehooks', async (importOriginal) => {
     ...actual,
     useVisibilityChange: vi.fn()
   };
-});
+}); 
 
 describe('useBackgroundEmulator hook', () => {
   it('pauses emulator when entering background if running and not paused', () => {

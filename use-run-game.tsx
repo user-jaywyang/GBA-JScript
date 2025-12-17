@@ -13,7 +13,7 @@ import { useEmulatorContext, useRunningContext } from '../context.tsx';
 
 import type { EmulatorSettings } from '../../components/modals/emulator-settings.tsx';
 import type { KeyBinding } from '../../emulator/mgba/mgba-emulator.tsx';
-
+ 
 export const useRunGame = () => {
   const { emulator } = useEmulatorContext();
   const { setIsRunning } = useRunningContext();

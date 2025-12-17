@@ -29,7 +29,7 @@ GoAdmin is a golang framework help gopher quickly build a data visualization pla
 
 ## Generate Table Model
 
-### online tool
+### online tool 
 
 visit: http://127.0.0.1:80/admin/info/generate/new
 

@@ -11,7 +11,7 @@ const generateScreenshot = (emulator: GBAEmulator | null) => {
   const fileName = 'fade-copy.png';
   const filePath = emulator.filePaths().screenshotsPath + '/' + fileName;
   const successful = emulator.screenshot(fileName);
-
+ 
   if (!successful) return null;
 
   const fileBytes = emulator.getFile(filePath);

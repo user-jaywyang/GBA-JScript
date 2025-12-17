@@ -15,7 +15,7 @@ export const useFileStat = (path?: string | null) => {
   const { emulator } = useEmulatorContext();
   const getSnapshot = useCallback(() => {
     if (!path) return undefined;
-
+ 
     try {
       return emulator?.getStat(path).mtime.getTime();
     } catch {

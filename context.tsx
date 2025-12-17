@@ -8,7 +8,7 @@ import { RunningContext } from '../context/emulator/contexts/running-context.tsx
 import { InitialBoundsContext } from '../context/initial-bounds/initial-bounds-context.tsx';
 import { LayoutContext } from '../context/layout/layout-context.tsx';
 import { ModalContext } from '../context/modal/modal-context.tsx';
-
+ 
 const useLoadContext = <T,>(context: Context<T>) => {
   const displayName = context.displayName;
   const loadedContext = useContext(context);

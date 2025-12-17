@@ -11,7 +11,7 @@ import (
 	_ "github.com/GoAdminGroup/themes/adminlte"
 	_ "github.com/GoAdminGroup/themes/sword" // ui themes
 
-	"github.com/GoAdminGroup/go-admin/engine"
+	"github.com/GoAdminGroup/go- admin/engine"
 	"github.com/GoAdminGroup/go-admin/template"
 	"github.com/GoAdminGroup/go-admin/template/chartjs"
 	"github.com/gorilla/mux"

@@ -18,6 +18,6 @@ services:
         restart: always
         secrets:
             - shepherd-registries
-secrets:
+secrets: 
     shepherd-registries:
         file: ./shepherd/shepherd-registries

@@ -11,7 +11,7 @@ type AutoSaveData = {
   timestamp: string;
   event: string;
 };
-
+ 
 const base64ToUint8Array = (base64: string) => {
   const binary = atob(base64);
   const len = binary.length;

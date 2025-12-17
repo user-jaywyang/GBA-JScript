@@ -1,46 +1,102 @@
-# gbajs3 -- A Browser Based Game Boy Advance Emulator
+# A Browser Based Game Boy Advance Emulator
 
 This project is a Game Boy Advance emulator that works in any modern browser without plugins.
 
 It began as a re-skin of the [gbajs2](https://github.com/andychase/gbajs2) fork by andychase, but now supports the [mGBA wasm](https://github.com/thenick775/mgba/tree/feature/wasm) core through the use of emscripten.
 
 
-## New Feature List
+## Overview
 
-- Golang server for logged-in user support
-- Nginx server for gbajs3 content
-- Fast Forward support
-- Re-mappable keyboard bindings
-- Virtual controls (Desktop/Mobile)
-- Movable desktop canvas and controls
-- Control profiles
-- Mobile UI support
-- Offline PWA support
-- Save state support
-- Auto save state support
-- Cheat code support
-- Soft patch support
-- Rewind support
-- Threading support
-- Core support
-  - mGBA (wasm based)
-- Admin UI
-- Postgres support
-- Persistent file system utilizing IndexedDB
-- Load public rom files from query string
-- Full import/export support
+At a high level, GBAJS3 gives you:
 
+- A **React/TypeScript single-page app** that embeds the mGBA core compiled to WebAssembly and provides a touch-friendly UI.
+- A **Go “auth & storage” service** that handles login, tokens, and managing ROM/save files for users in a PostgreSQL-backed store.
+- A **Go-based admin interface** built with GoAdmin for managing users and data in the database.
+- A **PostgreSQL database** (with initialization scripts) and a **Dockerized Nginx frontend** that serves the SPA over HTTPS and proxies API traffic.
 
-## To Do
+Everything is wired together via Docker Compose so you can stand up the entire stack locally with a handful of commands.
 
-- Debugger enhancements
-- Server enhancements
-  - request an account feature suite
-  - s3 backed file storage
-- Additional core support
-  - NanoBoyAdvance (secondary core)
-  - SkyEmu (secondary core)
+---
 
+## Features
+
+### Front-End Emulator
+
+Located in: `gbajs3/`
+
+The browser client is a full-screen, responsive emulator UI with:
+
+- **mGBA WASM core** via `@thenick775/mgba-wasm`.
+- **Keyboard and on-screen controls**:
+  - Desktop keyboards with configurable bindings.
+  - Virtual D-pad and buttons for touch devices.
+- **Configurable emulator settings**:
+  - Controls for performance/audio/video exposed through a settings modal (e.g., sample rate choices, buffer sizes).
+- **Modal-driven UX**:
+  - Pre-game actions (e.g., load saves before starting a ROM).
+  - Dedicated dialogs for loading ROMs, loading saves, cheats, emulator settings, file system, import/export, and legal notices.
+- **Error handling and toasts**:
+  - Central error boundary and toast notifications for API failures or emulator issues.
+- **Responsive layout**:
+  - Works on desktop, tablets, and phones with a layout provider + virtual controls.
+
+### ROM & Save Management
+
+The system is built around the idea that ROMs and saves can live both **locally in the browser** and **remotely on the server**:
+
+- **List & load ROMs from the backend**:
+  - Uses React Query hooks (`useListRoms`, `useLoadRom`, etc.) to talk to `/api/rom/*` endpoints.
+- **Upload/download saves**:
+  - Upload save files to the backend (`/api/save/upload`) and fetch them back (`/api/save/download`).
+- **Local file loading**:
+  - Load a ROM directly from the local filesystem using file picker components.
+- **Virtual file system views**:
+  - UI for exploring the emulator’s internal file tree (ROMs, saves, autosaves, screenshots, cheats, patches, etc.).
+- **Cheat management**:
+  - A dedicated cheats modal for adding, enabling/disabling, and removing cheat entries.
+
+### Authentication & API
+
+Located in: `auth/`
+
+A standalone Go service provides all auth and storage endpoints:
+
+- **JWT-based authentication**:
+  - Endpoints for logging in (`/api/account/login`) and refreshing access tokens (`/api/tokens/refresh`).
+- **User persistence in PostgreSQL**:
+  - GORM models for users, tokens, and per-user storage directories.
+- **ROM & save APIs**:
+  - `/api/rom/list`, `/api/rom/upload`, `/api/rom/download`
+  - `/api/save/list`, `/api/save/upload`, `/api/save/download`
+- **CORS and gzip**:
+  - CORS middleware for browser clients.
+  - Optional gzip compression for responses.
+- **Swagger/OpenAPI docs**:
+  - Generated documentation stored in `auth/docs/` so you can inspect request/response shapes while developing.
+
+### Admin Dashboard
+
+Located in: `admin/`
+
+The admin service gives you a management interface for the backing databases:
+
+- Built with **GoAdmin** and Gorilla Mux.
+- Connects to the same PostgreSQL instance to provide admin tables and dashboards.
+- Serves an admin landing page at `/admin` using `html/welcome.tmpl`.
+- Terminated over HTTPS with local certs in the Docker setup (configurable via environment variables).
+
+This is intended for maintaining users, inspecting data, and eventually adding application-specific dashboards.
+
+### PWA & Offline Support
+
+The front-end is set up as a **Progressive Web App**:
+
+- Uses `vite-plugin-pwa` to generate a PWA manifest and service worker.
+- Can be **installed** on supported devices as a standalone app icon.
+- A **“COOP/COEP through service worker”** mode (`with-coi-serviceworker`) is available for advanced browser isolation and WebAssembly performance scenarios.
+- Static assets (including the emulator core and UI) are cached, enabling offline or spotty-network gameplay once ROMs are available locally.
+
+---
 
 
 ## Getting Started
@@ -125,43 +181,90 @@ It began as a re-skin of the [gbajs2](https://github.com/andychase/gbajs2) fork 
 
 - To run each service individually, with or without docker, see the nested READMEs under each top level service directory
 
+## Architecture
 
-## License
+High-level components:
 
-Original work by Endrift. Repo: (Archived / No longer maintained)
-https://github.com/endrift/gbajs
-Copyright © 2012 – 2013, Jeffrey Pfau
+```text
++--------------------+        +---------------------+
+| Browser (React SPA)| <----> | gba-webserver       |
+|  - Emulator UI     |  HTTPS |  (Nginx + TLS)      |
++--------------------+        |  - serves SPA       |
+                              |  - proxies /api/... |
+                              +----------+----------+
+                                         |
+                                         |
+                                         v
+                         +---------------+---------------+
+                         |                               |
+               +---------+---------+           +---------+---------+
+               | gba-auth-server  |           | gba-admin-server  |
+               |  (Go)            |           |  (Go + GoAdmin)   |
+               |  - JWT auth      |           |  - Admin UI       |
+               |  - ROM/save API  |           |  - DB mgmt        |
+               +---------+--------+           +---------+---------+
+                         \                         /
+                          \                       /
+                           v                     v
+                              +-----------------+
+                              |  PostgreSQL DB  |
+                              |  (gbajs3, admin)|
+                              +-----------------+
 
-Original work by Endrift. Repo: (mGBA wasm base)
-https://github.com/endrift/mgba
-mGBA is Copyright © 2013 – 2018 Jeffrey Pfau. It is distributed under the [Mozilla Public License version 2.0](https://www.mozilla.org/MPL/2.0/). A full copy of the license is available at my [fork](https://github.com/thenick775/mgba).
-
-Original work by andychase. Repo: (gbajs2 base)
-https://github.com/andychase/gbajs2
-Copyright © 2020, Andrew Chase
-
-Copyright © 2025, Jay Yang
-
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-- Redistributions of source code must retain the above copyright notice, this
-  list of conditions and the following disclaimer.
-
-- Redistributions in binary form must reproduce the above copyright notice,
-  this list of conditions and the following disclaimer in the documentation
-  and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
+GBA-JSSCRIPT/
+├── .env.example              # Combined env for docker compose
+├── docker-compose.yaml       # Orchestration glue for all services
+├── docker-compose.swarm.yaml # Swarm deployment variant
+├── LICENSE
+├── README.md                 # (can be replaced by this file)
+│
+├── gbajs3/                   # Front-end SPA + Nginx image
+│   ├── Dockerfile
+│   ├── docker/
+│   │   ├── nginx.conf.template
+│   │   └── fail2ban/...
+│   ├── src/
+│   │   ├── App.tsx
+│   │   ├── components/...
+│   │   ├── context/...
+│   │   ├── emulator/mgba/...
+│   │   ├── hooks/...
+│   │   └── service-worker/
+│   ├── vite.config.ts
+│   └── tsconfig.json
+│
+├── auth/                     # Auth + ROM/save API (Go)
+│   ├── Dockerfile
+│   ├── .env.example
+│   ├── main.go
+│   ├── routes.go
+│   ├── auth_handlers.go
+│   ├── db.go
+│   ├── models.go
+│   └── docs/swagger.*        # Swagger/OpenAPI description
+│
+├── admin/                    # Admin dashboard (Go + GoAdmin)
+│   ├── Dockerfile
+│   ├── .env.example
+│   ├── main.go
+│   ├── conf/
+│   ├── models/
+│   ├── pages/
+│   ├── tables/
+│   └── html/welcome.tmpl
+│
+├── postgres/                 # Postgres container setup
+│   ├── Dockerfile
+│   ├── .env.example
+│   ├── docker-compose.yaml
+│   ├── init_admin_db.sql
+│   └── init_gbajs3_db.sql
+│
+├── readme-graphics/          # Screenshots for documentation
+│   ├── gbajs3-desktop-v5.png
+│   ├── gbajs3-mobile-landscape-v2.png
+│   ├── gbajs3-mobile-portrait-v5.png
+│   └── admin-desktop.png
+│
+└── shepherd/                 # Optional container auto-updater config
+    └── docker-compose.yaml

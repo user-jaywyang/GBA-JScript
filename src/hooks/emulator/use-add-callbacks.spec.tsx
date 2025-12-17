@@ -14,7 +14,7 @@ type Expected = {
   saveDataUpdatedCallback: (() => void) | null;
   autoSaveStateLoadedCallback: (() => void) | null;
   autoSaveStateCapturedCallback: (() => void) | null;
-};
+}; 
 
 type TestCase = [label: string, input: CoreCallbackOptions, expected: Expected];
 

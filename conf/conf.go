@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 )
-
+ 
 func NewAppConf() config.Config {
 	appID, clientDomain, dbHost, gbajsDsn, adminDsn := getValuesFromEnv()
 

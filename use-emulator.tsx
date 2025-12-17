@@ -17,7 +17,7 @@ export const useEmulator = (canvas: HTMLCanvasElement | null) => {
         const mGBAVersion =
           Module.version.projectName + ' ' + Module.version.projectVersion;
         console.log(mGBAVersion);
-
+ 
         await Module.FSInit();
 
         const emulator = mGBAEmulator(Module);
